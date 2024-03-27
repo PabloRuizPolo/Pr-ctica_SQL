@@ -9,9 +9,9 @@ create table if not exists socio (
 	fecha_nacimiento date not null,
 	telefono VARCHAR(20) NOT null,
 	email VARCHAR(50) NOT null,
-	dni_socio varchar(15) not null
+	dni_socio varchar(15) not null,
+	id_direccion int not null
 );
-alter table socio add id_direccion serial not null;
 
 create table if not exists direccion_socio (
 	id_direccion serial primary key,
@@ -24,19 +24,23 @@ create table if not exists direccion_socio (
 
 create table if not exists ficha_alquiler (
 	id_ficha serial primary key,
-	id_registro_pelicula serial not null,
+	id_copia_pelicula int not null,
 	fecha_alquiler date not null,
 	fecha_retorno varchar(25) null,
-	n_socio serial not null
+	n_socio int not null
+);
+
+create table if not exists copia_pelicula (
+	id_copia_pelicula serial primary key,
+	id_pelicula int not null
 );
 
 create table if not exists peliculas (
-	id_registro_pelicula serial primary key,
-	id_copia int not null,
+	id_pelicula serial primary key,
 	id_director int not null,
 	año_publicacion date default('1985-02-08'),
 	id_genero int not null,
-	titulo varchar(80) not null,
+	titulo varchar(150) not null,
 	sinopsis text not null
 );
 
@@ -47,7 +51,7 @@ create table if not exists genero (
 
 create table if not exists director (
 	id_director serial primary key,
-	nombre varchar(50) not null
+	nombre varchar(100) not null
 );
 
 CREATE TABLE tmp_videoclub (
@@ -72,7 +76,6 @@ CREATE TABLE tmp_videoclub (
 	director varchar(80) NULL,
 	fecha_alquiler date NULL,
 	fecha_devolucion date null);
-
 
 INSERT INTO tmp_videoclub (id_copia,fecha_alquiler_texto,dni,nombre,apellido_1,apellido_2,email,telefono,codigo_postal,fecha_nacimiento,numero,piso,letra,calle,ext,titulo,genero,sinopsis,director,fecha_alquiler,fecha_devolucion) VALUES
 	 (3,'2024-01-28','1124603H','Ivan','Santana','Medina','ivan.santana.medina@gmail.com','694804631','47007','2005-02-15','6','3','D','Francisco Pizarro','3D','El padrino','Drama','Don Vito Corleone, conocido dentro de los círculos del hampa como ''El Padrino'', es el patriarca de una de las cinco familias que ejercen el mando de la Cosa Nostra en Nueva York en los años cuarenta. Don Corleone tiene cuatro hijos: una chica, Connie, y tres varones; Sonny, Michael y Fredo. Cuando el Padrino reclina intervenir en el negocio de estupefacientes, empieza una cruenta lucha de violentos episodios entre las distintas familias del crimen organizado.','Francis Ford Coppola','2024-01-28',NULL),
@@ -593,45 +596,44 @@ INSERT INTO tmp_videoclub (id_copia,fecha_alquiler_texto,dni,nombre,apellido_1,a
 	 (306,'2024-01-07','6810904Y','Hugo','Torres','Ferrer','hugo.torres.ferrer@gmail.com','649016903','47006','1994-06-05','50','1','Der.','Federico García Lorca','1Der.','La doncella','Thriller','Corea, década de 1930, durante la colonización japonesa. Una joven llamada Sookee es contratada como doncella de una rica mujer japonesa, Hideko, que vive recluida en una gran mansión bajo la influencia de un tirano. Sookee guarda un secreto y con la ayuda de un estafador que se hace pasar por un conde japonés, planea algo para Hideko.','Park Chan-wook','2024-01-07','2024-01-08'),
 	 (308,'2024-01-25','1638778M','Angel','Lorenzo','Caballero','angel.lorenzo.caballero@gmail.com','698073069','47008','2011-07-30','82','1','Izq.','Sol','1Izq.','El bazar de las sorpresas','Comedia','Alfred Kralik es el tímido jefe de vendedores de Matuschek y Compañía, una tienda de Budapest. Todas las mañanas, los empleados esperan juntos la llegada de su jefe, Hugo Matuschek. A pesar de su timidez, Alfred responde al anuncio de un periódico y mantiene un romance por carta. Su jefe decide contratar a una tal Klara Novak en contra de la opinión de Alfred. En el trabajo, Alfred discute constantemente con ella, sin sospechar que es su corresponsal secreta.','Ernst Lubitsch','2024-01-25',NULL);
 
-alter table socio 
-add constraint fk_direccion_socio_socio
-foreign key (id_direccion)
-references direccion_socio(id_direccion);
 	
-alter table ficha_alquiler 
-add constraint fk_socio_ficha_alquiler
-foreign key (n_socio)
-references socio(n_socio);
+-- Creo FK
+	
+alter table socio add constraint fk_direccion_socio_socio foreign key (id_direccion) references direccion_socio(id_direccion);
+	
+alter table ficha_alquiler add constraint fk_socio_ficha_alquiler foreign key (n_socio) references socio(n_socio);
 
-alter table ficha_alquiler 
-add constraint fk_id_registro_pelicula_ficha_alquiler
-foreign key (id_registro_pelicula)
-references peliculas(id_registro_pelicula);
+alter table ficha_alquiler add constraint fk_id_copia_pelicula_ficha_alquiler foreign key (id_copia_pelicula) references copia_pelicula(id_copia_pelicula);
 
-alter table peliculas 
-add constraint fk_id_director_peliculas
-foreign key (id_director)
-references director(id_director);
+alter table copia_pelicula add constraint fk_id_pelicula_copia_pelicula foreign key (id_pelicula) references peliculas(id_pelicula);
 
-alter table peliculas
-add constraint fk_genero_peliculas
-foreign key (id_genero)
-references genero(id_genero);
+alter table peliculas add constraint fk_id_director_peliculas foreign key (id_director) references director(id_director);
+
+alter table peliculas add constraint fk_id_genero_peliculas foreign key (id_genero) references genero(id_genero);
+
+-- Evito valores duplicados
+
+ALTER TABLE director ADD CONSTRAINT unique_nombre_director UNIQUE (nombre);
+ALTER TABLE genero ADD CONSTRAINT unique_nombre_genero UNIQUE (nombre);
+ALTER TABLE socio ADD CONSTRAINT unique_dni_socio UNIQUE (dni_socio);
+ALTER TABLE peliculas ADD CONSTRAINT unique_titulo_director_genero unique (id_director, titulo, id_genero);
 
 
 
-ALTER TABLE director ADD CONSTRAINT unique_director UNIQUE (nombre);
 insert into director (nombre)
 select distinct tv.director from tmp_videoclub tv; 
 
 insert into genero (nombre)
 select distinct tv.genero from tmp_videoclub tv;
 
-ALTER TABLE peliculas ADD CONSTRAINT unique_id_copia unique (id_copia);
-insert into peliculas (id_copia, id_director, id_genero, titulo, sinopsis)
-select distinct  tv.id_copia , d.id_director, g.id_genero, tv.titulo, tv.sinopsis from tmp_videoclub tv
+insert into peliculas (id_director, id_genero, titulo, sinopsis)
+select distinct d.id_director, g.id_genero, tv.titulo, tv.sinopsis from tmp_videoclub tv
 inner join director d on tv.director = d.nombre 
 inner join genero g on tv.genero = g.nombre;
+
+insert into copia_pelicula (id_copia_pelicula, id_pelicula)
+select distinct id_copia, p.id_pelicula from tmp_videoclub tv
+inner join peliculas p on p.titulo = tv.titulo;
 
 insert into direccion_socio (cp, numero, piso, letra, calle)
 select distinct cast(tv.codigo_postal as int) , tv.numero , tv.piso , tv.letra , tv.calle  from tmp_videoclub tv;
@@ -640,24 +642,26 @@ insert into socio (nombre, apellido1, apellido2, fecha_nacimiento, telefono, ema
 select distinct tv.nombre, tv.apellido_1 , tv.apellido_2 , cast(tv.fecha_nacimiento as date), tv.telefono , tv.email , tv.dni, ds.id_direccion  from tmp_videoclub tv 
 inner join direccion_socio ds on tv.calle = ds.calle and tv.numero = ds.numero and tv.piso = ds.piso and tv.letra = ds.letra;
 
-insert into ficha_alquiler (id_registro_pelicula, n_socio, fecha_alquiler, fecha_retorno)
-select p.id_registro_pelicula , s.n_socio , cast(tv.fecha_alquiler as date), tv.fecha_devolucion from tmp_videoclub tv 
-inner join peliculas p on tv.id_copia = p.id_copia 
+insert into ficha_alquiler (id_copia_pelicula, n_socio, fecha_alquiler, fecha_retorno)
+select cp.id_copia_pelicula , s.n_socio , cast(tv.fecha_alquiler as date), tv.fecha_devolucion from tmp_videoclub tv 
+inner join copia_pelicula cp on tv.id_copia = cp.id_copia_pelicula
 inner join socio s on tv.dni = s.dni_socio; 
 
 
 /*Consulta para saber que peliculas están disponibles para alquilar en este momento, y cuantas copias de cada una*/
-select p.titulo, COUNT(p.id_copia)
-from peliculas p
-inner join ficha_alquiler fa ON p.id_registro_pelicula = fa.id_registro_pelicula
-where fa.fecha_retorno IS NULL
-group by p.titulo;
+SELECT p.titulo, COUNT(cp.id_copia_pelicula) copias_disponibles FROM peliculas p
+INNER JOIN copia_pelicula cp ON p.id_pelicula = cp.id_pelicula
+LEFT JOIN ficha_alquiler fa ON cp.id_copia_pelicula = fa.id_copia_pelicula and fa.fecha_alquiler is not null and fa.fecha_retorno is null
+WHERE fa.id_ficha is NULL
+GROUP BY p.titulo;
+
 
 /* Consulta para saber cuantas veces ha alquilado cada genero un socio. No he podido sacar el genero favorito, pero de esta forma,
  * se puede mirar en general más allá de solo el fav */
 select s.n_socio, s.nombre, apellido1, g.id_genero, COUNT(*) from socio s
 inner join ficha_alquiler fa on s.n_socio = fa.n_socio
-inner join peliculas p on fa.id_registro_pelicula = p.id_registro_pelicula
+inner join copia_pelicula cp on fa.id_copia_pelicula = cp.id_copia_pelicula 
+inner join peliculas p on cp.id_pelicula = p.id_pelicula 
 inner join genero g on p.id_genero = g.id_genero
 group by s.n_socio, g.id_genero;
 
